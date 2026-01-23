@@ -1,8 +1,8 @@
-# skeleton-docker 💀🐳 #
+# cyhy-core-docker 💀🐳 #
 
-[![GitHub Build Status](https://github.com/cisagov/skeleton-docker/workflows/build/badge.svg)](https://github.com/cisagov/skeleton-docker/actions/workflows/build.yml)
-[![License](https://img.shields.io/github/license/cisagov/skeleton-docker)](https://spdx.org/licenses/)
-[![CodeQL](https://github.com/cisagov/skeleton-docker/workflows/CodeQL/badge.svg)](https://github.com/cisagov/skeleton-docker/actions/workflows/codeql-analysis.yml)
+[![GitHub Build Status](https://github.com/cisagov/cyhy-core-docker/workflows/build/badge.svg)](https://github.com/cisagov/cyhy-core-docker/actions/workflows/build.yml)
+[![License](https://img.shields.io/github/license/cisagov/cyhy-core-docker)](https://spdx.org/licenses/)
+[![CodeQL](https://github.com/cisagov/cyhy-core-docker/workflows/CodeQL/badge.svg)](https://github.com/cisagov/cyhy-core-docker/actions/workflows/codeql-analysis.yml)
 
 ## Docker Image ##
 
@@ -33,7 +33,7 @@ docker run cisagov/example:0.2.2+build.1
 
     ```yaml
     ---
-    name: skeleton-docker
+    name: cyhy-core-docker
 
     services:
       example:
@@ -74,7 +74,7 @@ environment variables.  See the
 
     ```yaml
     ---
-    name: skeleton-docker
+    name: cyhy-core-docker
 
     secrets:
       quote_txt:
