@@ -1,57 +1,6 @@
 # Official Docker images are in the form library/<app> while non-official
 # images are in the form <user>/<app>.
-FROM docker.io/library/python:3.14.2-alpine3.22 AS compile-stage
-
-###
-# Unprivileged user variables
-###
-ARG CISA_USER="cisa"
-ENV CISA_HOME="/home/${CISA_USER}"
-ENV VIRTUAL_ENV="${CISA_HOME}/.venv"
-
-# Versions of the Python packages installed directly
-ENV PYTHON_PIP_VERSION=25.1.1
-ENV PYTHON_PIPENV_VERSION=2025.0.3
-ENV PYTHON_SETUPTOOLS_VERSION=80.9.0
-ENV PYTHON_WHEEL_VERSION=0.45.1
-
-###
-# Install the specified versions of pip, setuptools, and wheel into the system
-# Python environment; install the specified version of pipenv into the system Python
-# environment; set up a Python virtual environment (venv); and install the specified
-# versions of pip, setuptools, and wheel into the venv.
-#
-# Note that we use the --no-cache-dir flag to avoid writing to a local
-# cache.  This results in a smaller final image, at the cost of
-# slightly longer install times.
-###
-RUN python3 -m pip install --no-cache-dir --upgrade \
-        pip==${PYTHON_PIP_VERSION} \
-        setuptools==${PYTHON_SETUPTOOLS_VERSION} \
-        wheel==${PYTHON_WHEEL_VERSION} \
-    && python3 -m pip install --no-cache-dir --upgrade \
-        pipenv==${PYTHON_PIPENV_VERSION} \
-    # Manually create the virtual environment
-    && python3 -m venv ${VIRTUAL_ENV} \
-    # Ensure the core Python packages are installed in the virtual environment
-    && ${VIRTUAL_ENV}/bin/python3 -m pip install --no-cache-dir --upgrade \
-        pip==${PYTHON_PIP_VERSION} \
-        setuptools==${PYTHON_SETUPTOOLS_VERSION} \
-        wheel==${PYTHON_WHEEL_VERSION}
-
-###
-# Install the Python dependencies into the virtual environment.
-#
-# Note that pipenv will install into a virtual environment if the VIRTUAL_ENV
-# environment variable is set.
-###
-WORKDIR /tmp
-COPY src/Pipfile src/Pipfile.lock ./
-RUN pipenv install --clear --deploy --extra-pip-args "--no-cache-dir" --verbose
-
-# Official Docker images are in the form library/<app> while non-official
-# images are in the form <user>/<app>.
-FROM docker.io/library/python:3.14.2-alpine3.22 AS build-stage
+FROM docker.io/library/debian:buster-slim AS build-stage
 
 ###
 # For a list of pre-defined annotation keys and value types see:
@@ -69,41 +18,114 @@ LABEL org.opencontainers.image.authors="github@cisa.dhs.gov"
 LABEL org.opencontainers.image.vendor="Cybersecurity and Infrastructure Security Agency"
 
 ###
+# Set the shell to bash for the RUN commands.
+# This will provide some extra functionality compared to the default shell.
+###
+SHELL ["/bin/bash", "-Eueo", "pipefail", "-c"]
+
+###
 # Unprivileged user setup variables
 ###
-ARG CISA_UID=421
+ARG CISA_UID=2048
 ARG CISA_GID=${CISA_UID}
 ARG CISA_USER="cisa"
 ENV CISA_GROUP=${CISA_USER}
-ENV CISA_HOME="/home/${CISA_USER}"
-ENV VIRTUAL_ENV="${CISA_HOME}/.venv"
+ENV CISA_HOME="/var/${CISA_USER}"
+
+###
+# Remove existing apt SourceList configuration and add in one configured
+# to use the Debian Archive. This is necessary because the Debian Buster
+# apt repository was archived.
+###
+RUN rm /etc/apt/sources.list
+COPY src/archive.list /etc/apt/sources.list.d/
+
+###
+# Ensure preinstalled packages are at their latest versions.
+# We do this because the base image is not being updated and does not have the latest
+# packages installed.
+###
+RUN apt-get update --quiet --quiet \
+    && apt-get upgrade --yes --quiet --quiet
+
+###
+# Install packages necessary to install the MongoDB shell.
+# We can safetly skip the update since we did so in the previous step.
+###
+RUN apt-get install --yes --no-install-recommends --quiet --quiet \
+      apt-transport-https \
+      ca-certificates \
+      software-properties-common
+
+###
+# Install the MongoDB shell from the official MongoDB apt repository.
+# We must update to get the package lists after adding the new source.
+###
+COPY src/mongodb.list /etc/apt/sources.list.d/
+RUN apt-get update --quiet --quiet \
+    && apt-get install --yes --no-install-recommends --quiet --quiet \
+      mongodb-org-shell
+
+###
+# Install Python 2 core system packages.
+###
+RUN apt-get install --yes --no-install-recommends --quiet --quiet \
+      python-pip \
+      python-setuptools \
+      python-wheel \
+      python2 \
+      python2-dev \
+      python2-minimal
+
+###
+# Install the system packages necessary to run cisagov/cyhy-core.
+# We can safetly skip the update since we did so in the previous step.
+###
+RUN apt-get install --yes --no-install-recommends --quiet --quiet \
+      # PyCrypto
+      python-crypto \
+      python-dateutil \
+      python-docopt \
+      python-geoip2 \
+      python-maxminddb \
+      python-netaddr \
+      python-pandas \
+      python-progressbar \
+      # The versions available are >= 3 but the cyhy-core package currently has
+      # a requirement of < 3. When the cyhy-core package supports a more recent
+      # version of PyMongo, this should be enabled.
+      # python-pymongo \
+      python-six \
+      python-unidecode \
+      # PyYAML
+      python-yaml
+
+###
+# Install the cisagov/cyhy-core package.
+# The version installed should be in lockstep with the version of this Docker
+# image. The version is read from src/version.txt.
+###
+COPY src/version.txt /tmp
+RUN pip install --no-cache-dir \
+      https://api.github.com/repos/cisagov/cyhy-core/tarball/v$(< /tmp/version.txt) \
+    && rm /tmp/version.txt
+
+###
+# Clean up apt cache to reduce image size.
+###
+RUN apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 ###
 # Create unprivileged user
 ###
-RUN addgroup --system --gid ${CISA_GID} ${CISA_GROUP} \
-    && adduser --system --uid ${CISA_UID} --ingroup ${CISA_GROUP} ${CISA_USER}
-
-###
-# Copy in the Python virtual environment created in compile-stage, symlink the
-# Python binary in the venv to the system-wide Python, and add the venv to the PATH.
-#
-# Note that we symlink the Python binary in the venv to the system-wide Python so that
-# any calls to `python3` will use our virtual environment. We are using short flags
-# because the ln binary in Alpine Linux does not support long flags. The -f instructs
-# ln to remove the existing file and the -s instructs ln to create a symbolic link.
-###
-COPY --from=compile-stage --chown=${CISA_USER}:${CISA_GROUP} ${VIRTUAL_ENV} ${VIRTUAL_ENV}
-RUN ln -fs "$(command -v python3)" "${VIRTUAL_ENV}"/bin/python3
-ENV PATH="${VIRTUAL_ENV}/bin:$PATH"
+RUN groupadd --system --gid ${CISA_GID} ${CISA_GROUP} \
+    && useradd --create-home --system \
+       --uid ${CISA_UID} --gid ${CISA_GID} \
+       --home-dir ${CISA_HOME} ${CISA_USER}
 
 ###
 # Prepare to run
 ###
-ENV ECHO_MESSAGE="Hello World from Dockerfile"
 WORKDIR ${CISA_HOME}
 USER ${CISA_USER}:${CISA_GROUP}
-EXPOSE 8080/tcp
-VOLUME ["/var/log"]
-ENTRYPOINT ["example"]
-CMD ["--log-level", "DEBUG", "8", "2"]
