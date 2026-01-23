@@ -29,16 +29,6 @@ def main_container(dockerc):
 
 
 @pytest.fixture(scope="session")
-def version_container(dockerc):
-    """Return the version container from the Docker composition.
-
-    The version container should just output the version of its underlying contents.
-    """
-    # find the container by name even if it is stopped already
-    return dockerc.compose.ps(services=[VERSION_SERVICE_NAME], all=True)[0]
-
-
-@pytest.fixture(scope="session")
 def project_version():
     """Return the version of the project."""
     with open(VERSION_FILE) as f:

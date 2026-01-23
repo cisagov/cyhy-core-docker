@@ -8,11 +8,7 @@ import time
 import pytest
 import semver
 
-ENV_VAR = "ECHO_MESSAGE"
-ENV_VAR_VAL = "Hello World from Docker Compose!"
-READY_MESSAGE = "This is a debug message"
-DIVISION_MESSAGE = "8 / 2 == 4.000000"
-SECRET_QUOTE = "Three may keep a secret, if two of them are dead."  # nosec
+READY_MESSAGE = "Package"
 RELEASE_TAG = os.getenv("RELEASE_TAG")
 VERSION_FILE = "src/version.txt"
 
@@ -21,7 +17,7 @@ def test_container_count(dockerc):
     """Verify the test composition and container."""
     # all parameter allows non-running containers in results
     assert (
-        len(dockerc.compose.ps(all=True)) == 2
+        len(dockerc.compose.ps(all=True)) == 1
     ), "Wrong number of containers were started."
 
 
@@ -39,23 +35,29 @@ def test_wait_for_ready(main_container):
         )
 
 
-def test_wait_for_exits(dockerc, main_container, version_container):
+def test_wait_for_exits(dockerc, main_container):
     """Wait for containers to exit."""
     assert (
         dockerc.wait(main_container.id) == 0
     ), "Container service (main) did not exit cleanly"
-    assert (
-        dockerc.wait(version_container.id) == 0
-    ), "Container service (version) did not exit cleanly"
 
 
-def test_output(dockerc, main_container):
+def test_output(dockerc, main_container, project_version):
     """Verify the container had the correct output."""
     # make sure container exited if running test isolated
     dockerc.wait(main_container.id)
     log_output = main_container.logs()
-    assert DIVISION_MESSAGE in log_output, "Division message not found in log output."
-    assert SECRET_QUOTE in log_output, "Secret not found in log output."
+    log_output_lines = log_output.splitlines()
+    cyhy_core_version = None
+    for line in log_output_lines:
+        if line.startswith("cyhy-core"):
+            cyhy_core_version = line.strip().split(" ")[-1]
+            break
+
+    assert cyhy_core_version is not None, "cyhy-core version not found in log output"
+    assert cyhy_core_version == semver.version.Version.parse(
+        project_version
+    ), "cyhy-core version in log does not match project version"
 
 
 @pytest.mark.skipif(
@@ -66,24 +68,3 @@ def test_release_version(project_version):
     assert (
         RELEASE_TAG == f"v{project_version}"
     ), "RELEASE_TAG does not match the project version"
-
-
-def test_log_version(dockerc, project_version, version_container):
-    """Verify the container outputs the correct version to the logs."""
-    # make sure container exited if running test isolated
-    dockerc.wait(version_container.id)
-    log_version = semver.version.Version.parse(version_container.logs().strip())
-    assert log_version == semver.version.Version.parse(
-        project_version
-    ), f"Container version output to log does not match project version file {VERSION_FILE}"
-
-
-@pytest.mark.skipif(
-    RELEASE_TAG in [None, ""], reason="this is not a release (RELEASE_TAG not set)"
-)
-def test_container_version_label_matches(project_version, version_container):
-    """Verify the container version label is the correct version."""
-    assert (
-        version_container.config.labels["org.opencontainers.image.version"]
-        == project_version
-    ), "Dockerfile version label does not match project version"
