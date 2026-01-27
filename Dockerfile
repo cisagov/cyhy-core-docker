@@ -18,12 +18,6 @@ LABEL org.opencontainers.image.authors="github@cisa.dhs.gov"
 LABEL org.opencontainers.image.vendor="Cybersecurity and Infrastructure Security Agency"
 
 ###
-# Set the shell to bash for the RUN commands.
-# This will provide some extra functionality compared to the default shell.
-###
-SHELL ["/bin/bash", "-Eueo", "pipefail", "-c"]
-
-###
 # Unprivileged user setup variables
 ###
 ARG CISA_UID=2048
@@ -101,14 +95,11 @@ RUN apt-get install --yes --no-install-recommends --quiet --quiet \
       python-yaml
 
 ###
-# Install the cisagov/cyhy-core package.
-# The version installed should be in lockstep with the version of this Docker
-# image. The version is read from src/version.txt.
+# Install the cisagov/cyhy-core package requirements.
 ###
-COPY src/version.txt /tmp
-RUN pip install --no-cache-dir \
-      https://api.github.com/repos/cisagov/cyhy-core/tarball/v$(< /tmp/version.txt) \
-    && rm /tmp/version.txt
+COPY src/requirements.txt /tmp
+RUN pip install --no-cache-dir --requirement /tmp/requirements.txt \
+    && rm /tmp/requirements.txt
 
 ###
 # Clean up apt cache to reduce image size.

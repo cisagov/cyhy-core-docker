@@ -1,0 +1,3 @@
+# The version of the Docker image should be kept in sync with the version of
+# the cisagov/cyhy-core package specified here.
+https://api.github.com/repos/cisagov/cyhy-core/tarball/v1.2.0
