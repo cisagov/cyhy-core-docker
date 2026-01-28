@@ -116,6 +116,11 @@ RUN groupadd --system --gid ${CISA_GID} ${CISA_GROUP} \
        --home-dir ${CISA_HOME} ${CISA_USER}
 
 ###
+# Declare volumes for the configuration file and the MaxMind GeoIP2 database.
+###
+VOLUME ["/etc/cyhy", "/usr/local/share/GeoIP/"]
+
+###
 # Prepare to run
 ###
 WORKDIR ${CISA_HOME}
