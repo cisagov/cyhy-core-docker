@@ -6,25 +6,21 @@
 
 ## Docker Image ##
 
-[![Docker Pulls](https://img.shields.io/docker/pulls/cisagov/example)](https://hub.docker.com/r/cisagov/example)
-[![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/cisagov/example)](https://hub.docker.com/r/cisagov/example)
-[![Platforms](https://img.shields.io/badge/platforms-386%20%7C%20amd64%20%7C%20arm%2Fv6%20%7C%20arm%2Fv7%20%7C%20arm64%20%7C%20ppc64le%20%7C%20riscv64%20%7C%20s390x-blue)](https://hub.docker.com/r/cisagov/example/tags)
+[![Docker Pulls](https://img.shields.io/docker/pulls/cisagov/cyhy-core)](https://hub.docker.com/r/cisagov/cyhy-core)
+[![Docker Image Size (latest by date)](https://img.shields.io/docker/image-size/cisagov/cyhy-core)](https://hub.docker.com/r/cisagov/cyhy-core)
+[![Platforms](https://img.shields.io/badge/platforms-amd64-blue)](https://hub.docker.com/r/cisagov/cyhy-core/tags)
 
-This is a Docker skeleton project that can be used to quickly get a
-new [cisagov](https://github.com/cisagov) GitHub Docker project
-started.  This skeleton project contains [licensing
-information](LICENSE), as well as [pre-commit hooks](https://pre-commit.com)
-and [GitHub Actions](https://github.com/features/actions) configurations
-appropriate for Docker containers and the major languages that we use.
+This is a containerization of the [cisagov/cyhy-core] project to serve as a
+base image for other Cyber Hygiene containerization projects.
 
 ## Running ##
 
 ### Running with Docker ###
 
-To run the `cisagov/example` image via Docker:
+To run the `cisagov/cyhy-core` image via Docker:
 
 ```console
-docker run cisagov/example:0.2.2+build.1
+docker run cisagov/cyhy-core:1.2.0
 ```
 
 ### Running with Docker Compose ###
@@ -33,20 +29,17 @@ docker run cisagov/example:0.2.2+build.1
 
     ```yaml
     ---
-    name: cyhy-core-docker
+    name: cyhy-core
 
     services:
-      example:
-        environment:
-          - ECHO_MESSAGE="Hello from Docker Compose"
-        image: cisagov/example:0.2.2+build.1
-        ports:
-          - protocol: tcp
-            published: "8080"
-            target: 8080
+      cyhy-core:
+        image: cisagov/cyhy-core:1.2.0
         volumes:
-          - source: <your_log_dir>
-            target: /var/log
+          - source: <your_cyhy_conf_dir>
+            target: /etc/cyhy
+            type: bind
+          - source: <your_maxmind_db_dir>
+            target: /usr/local/share/GeoIP
             type: bind
     ```
 
@@ -54,48 +47,6 @@ docker run cisagov/example:0.2.2+build.1
 
     ```console
     docker compose up --detach
-    ```
-
-## Using secrets with your container ##
-
-This container also supports passing sensitive values via [Docker
-secrets](https://docs.docker.com/engine/swarm/secrets/).  Passing sensitive
-values like your credentials can be more secure using secrets than using
-environment variables.  See the
-[secrets](#secrets) section below for a table of all supported secret files.
-
-1. To use secrets, create a `quote.txt` file containing the values you want set:
-
-    ```text
-    Better lock it in your pocket.
-    ```
-
-1. Then add the secret to your `compose.yml` file:
-
-    ```yaml
-    ---
-    name: cyhy-core-docker
-
-    secrets:
-      quote_txt:
-        file: quote.txt
-
-    services:
-      example:
-        environment:
-          - ECHO_MESSAGE="Hello from Docker Compose"
-        image: cisagov/example:0.2.2+build.1
-        ports:
-          - protocol: tcp
-            published: "8080"
-            target: 8080
-        secrets:
-          - source: quote_txt
-            target: quote.txt
-        volumes:
-          - source: <your_log_dir>
-            target: /var/log
-            type: bind
     ```
 
 ## Updating your container ##
@@ -125,75 +76,46 @@ environment variables.  See the
 1. Pull the new image:
 
     ```console
-    docker pull cisagov/example:0.2.2+build.1
+    docker pull cisagov/cyhy-core:1.2.0
     ```
 
 1. Recreate and run the container by following the [previous instructions](#running-with-docker).
-
-## Updating Python dependencies ##
-
-This image uses [Pipenv] to manage Python dependencies using a [Pipfile](https://github.com/pypa/pipfile).
-Both updating dependencies and changing the [Pipenv] configuration in `src/Pipfile`
-will result in a modified `src/Pipfile.lock` file that should be committed to the
-repository.
-
-> [!WARNING]
-> The `src/Pipfile.lock` as generated will fail `pre-commit` checks due to JSON formatting.
-
-### Updating dependencies ###
-
-If you want to update existing dependencies you would run the following command
-in the `src/` subdirectory:
-
-```console
-pipenv lock
-```
-
-### Modifying dependencies ###
-
-If you want to add or remove dependencies you would update the `src/Pipfile` file
-and then update dependencies as you would above.
-
-> [!NOTE]
-> You should only specify packages that are direct requirements of
-> your Docker configuration. Allow [Pipenv] to manage the dependencies
-> of the specified packages.
 
 ## Image tags ##
 
 The images of this container are tagged with [semantic
 versions](https://semver.org) of the underlying example project that they
 containerize.  It is recommended that most users use a version tag (e.g.
-`:0.2.2+build.1`).
+`:1.2.0`).
 
 | Image:tag | Description |
 |-----------|-------------|
-|`cisagov/example:0.2.2+build.1`| An exact release version. |
-|`cisagov/example:0.2`| The most recent release matching the major and minor version numbers. |
-|`cisagov/example:0`| The most recent release matching the major version number. |
-|`cisagov/example:edge` | The most recent image built from a merge into the `develop` branch of this repository. |
-|`cisagov/example:nightly` | A nightly build of the `develop` branch of this repository. |
-|`cisagov/example:latest`| The most recent release image pushed to a container registry.  Pulling an image using the `:latest` tag [should be avoided.](https://vsupalov.com/docker-latest-tag/) |
+|`cisagov/cyhy-core:1.2.0`| An exact release version. |
+|`cisagov/cyhy-core:1.2`| The most recent release matching the major and minor version numbers. |
+|`cisagov/cyhy-core:1`| The most recent release matching the major version number. |
+|`cisagov/cyhy-core:edge` | The most recent image built from a merge into the `develop` branch of this repository. |
+|`cisagov/cyhy-core:nightly` | A nightly build of the `develop` branch of this repository. |
+|`cisagov/cyhy-core:latest`| The most recent release image pushed to a container registry.  Pulling an image using the `:latest` tag [should be avoided.](https://vsupalov.com/docker-latest-tag/) |
 
-See the [tags tab](https://hub.docker.com/r/cisagov/example/tags) on Docker
+See the [tags tab](https://hub.docker.com/r/cisagov/cyhy-core/tags) on Docker
 Hub for a list of all the supported tags.
 
 ## Volumes ##
 
 | Mount point | Purpose        |
 |-------------|----------------|
-| `/var/log`  |  Log storage   |
+| `/etc/cyhy` | Contains the configuration file (`cyhy.conf`) |
+| `/usr/local/share/GeoIP/` | Contains the MaxMind GeoIP2 database (`GeoIP2-City.mmdb` or `GeoLite2-City.mmdb`) |
 
 ## Ports ##
 
-The following ports are exposed by this container:
+No ports are exposed by this container.
 
+<!--
 | Port | Purpose        |
 |------|----------------|
-| 8080 | Example only; nothing is actually listening on the port |
-
-The sample [Docker composition](compose.yml) publishes the
-exposed port at 8080.
+| port_number | Describe the port's purpose. |
+-->
 
 ## Environment variables ##
 
@@ -209,15 +131,23 @@ There are no required environment variables.
 
 ### Optional ###
 
+There are no optional environment variables.
+
+<!--
 | Name  | Purpose | Default |
 |-------|---------|---------|
-| `ECHO_MESSAGE` | Sets the message echoed by this container.  | `Hello World from Dockerfile` |
+| `OPTIONAL_VARIABLE` | Describe its purpose.  | `null` |
+-->
 
 ## Secrets ##
 
+There are no secrets for the container.
+
+<!--
 | Filename     | Purpose |
 |--------------|---------|
-| `quote.txt` | Replaces the secret stored in the example library's package data. |
+| `secret_filename.txt` | Describe the secret's purpose. |
+-->
 
 ## Building from source ##
 
@@ -225,8 +155,8 @@ Build the image locally using this git repository as the [build context](https:/
 
 ```console
 docker build \
-  --tag cisagov/example:0.2.2+build.1 \
-  https://github.com/cisagov/example.git#develop
+  --tag cisagov/cyhy-core:1.2.0 \
+  https://github.com/cisagov/cyhy-core.git#develop
 ```
 
 ## Cross-platform builds ##
@@ -239,7 +169,7 @@ Docker:
    or the command line:
 
     ```console
-    git clone https://github.com/cisagov/example.git
+    git clone https://github.com/cisagov/cyhy-core.git
     cd example
     ```
 
@@ -256,15 +186,8 @@ Docker:
       --file Dockerfile-x \
       --platform linux/amd64 \
       --output type=docker \
-      --tag cisagov/example:0.2.2+build.1 .
+      --tag cisagov/cyhy-core:1.2.0 .
     ```
-
-## New repositories from a skeleton ##
-
-Please see our [Project Setup guide](https://github.com/cisagov/development-guide/tree/develop/project_setup)
-for step-by-step instructions on how to start a new repository from
-a skeleton. This will save you time and effort when configuring a
-new repository!
 
 ## Contributing ##
 
@@ -284,4 +207,4 @@ All contributions to this project will be released under the CC0
 dedication. By submitting a pull request, you are agreeing to comply
 with this waiver of copyright interest.
 
-[Pipenv]: https://pypi.org/project/pipenv/
+[cisagov/cyhy-core]: https://github.com/cisagov/cyhy-core
