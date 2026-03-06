@@ -333,7 +333,7 @@ jobs:
         run: mkdir -p dist
       - name: Build image
         id: docker_build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           cache-from: type=gha
           # We use the max mode to cache all layers which includes ones from
@@ -561,7 +561,7 @@ jobs:
       # information.
       - name: Build platform images
         id: docker_build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           cache-from: type=gha
           # We use the max mode to cache all layers which includes ones from
@@ -584,7 +584,7 @@ jobs:
       # registries.
       - name: Push platform images to registries
         id: docker_push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           cache-from: type=gha
           # We use the max mode to cache all layers which includes ones from
